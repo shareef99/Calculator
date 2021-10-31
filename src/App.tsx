@@ -1,45 +1,91 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import "./App.css";
 import { evaluate } from "mathjs";
 
 function App() {
-    // useState
     const [equation, setEquation] = useState<string | null>(null);
-    const [result, setResult] = useState<string>("0");
+    const [result, setResult] = useState<string>("");
+    const [currentValue, setCurrentValue] = useState<string>("0");
+    const [display, setDisplay] = useState<string>("");
 
-    // Handle functions
     const updateEquation = (val: string) => {
-        let updatedEquation;
-        updatedEquation = [equation, val].join().replaceAll(",", "");
+        let newEquation;
 
-        if (updatedEquation.substring(0, 1) === "0") {
-            updatedEquation = updatedEquation.substring(1);
+        if (val === "cancel") {
+            if (equation === null) {
+                setEquation(null);
+                setCurrentValue("0");
+                setDisplay("");
+                setResult("");
+                return;
+            }
+
+            newEquation = equation!.slice(0, -1);
+            setEquation(newEquation);
+            setCurrentValue(newEquation.slice(-1));
+            return;
         }
 
-        updatedEquation = updatedEquation.replaceAll("..", ".");
+        setCurrentValue(val);
 
-        setEquation(updatedEquation);
+        if (equation === null) {
+            newEquation = val;
+        } else {
+            newEquation = equation + val;
+        }
+
+        // Removing first zero
+        if (newEquation.substring(0, 1) === "0") {
+            newEquation = newEquation.substring(1);
+        }
+
+        newEquation = newEquation.replaceAll("..", ".");
+
+        setEquation(newEquation);
     };
 
+    useEffect(() => {
+        if (equation === null) {
+            setDisplay("");
+            return;
+        }
+
+        if (result === "") {
+            setDisplay(equation);
+            return;
+        }
+
+        setDisplay(equation + "=" + result);
+    }, [equation, result]);
+
     const clearHandler = () => {
-        setEquation("0");
+        setEquation(null);
+        setResult("");
+        setCurrentValue("0");
+        setDisplay("0");
     };
 
     const resultHandler = () => {
-        const result = evaluate(equation!);
-        setEquation(null);
-        setResult(result);
+        if (equation !== null) {
+            try {
+                const result = evaluate(equation);
+                setResult(result.toString());
+            } catch (error) {
+                setResult("Error");
+            }
+        } else {
+            setResult("Enter Number");
+        }
     };
 
     return (
-        <section className="h-screen flex justify-center items-center">
+        <section className="h-screen flex flex-col justify-center items-center">
+            <h1 className="font-bold text-2xl">Simple Calculator</h1>
             <div id="calculator-wrapper" className="w-11/12 sm:w-80">
                 <div className="flex flex-col text-right">
-                    <span
-                        id="display"
-                        className={`${!Boolean(equation) && "h-6"}`}
-                    >
-                        {equation !== null ? equation : result}
+                    <span className="h-6 text-yellow-300">{display}</span>
+                    <span className="h-6">
+                        {result === "" ? currentValue : result}
                     </span>
                 </div>
                 <div
@@ -48,11 +94,18 @@ function App() {
                 >
                     <span
                         id="clear"
-                        className="col-span-2"
                         style={{ backgroundColor: "var(--red)" }}
                         onClick={clearHandler}
                     >
                         AC
+                    </span>
+                    <span
+                        id="cancel"
+                        className="text-2xl"
+                        style={{ backgroundColor: "var(--red)" }}
+                        onClick={() => updateEquation("cancel")}
+                    >
+                        &#8592;
                     </span>
                     <span
                         id="divide"
